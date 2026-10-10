@@ -31,7 +31,7 @@
     :fullscreen #w { position:fixed; inset:0; width:100vw; height:100vh; height:100dvh; max-width:none; margin:0; overflow:hidden; }
     :fullscreen #w canvas { width:100vw; height:100vh; height:100dvh; max-width:none; }
     :fullscreen #ui { inset:0; box-sizing:border-box; overflow:hidden; }
-    :fullscreen #tc { position:fixed; left:0; right:0; bottom:env(safe-area-inset-bottom, 0px); z-index:1000; }
+    :fullscreen #tc { position:fixed; left:0; right:0; bottom:max(22px, calc(env(safe-area-inset-bottom, 0px) + 18px)); z-index:1000; }
     #fullscreenHelp { font-size:clamp(11px, 1.6vw, 14px); opacity:.85; }
 
     #rotateNotice { display:none; position:fixed; inset:0; z-index:99999; background:radial-gradient(ellipse at center,#211735 0%,#07060c 75%); color:#ece9f5; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:24px; box-sizing:border-box; font-family:Georgia,'Times New Roman',serif; }
@@ -47,9 +47,9 @@
       #w { position:fixed; inset:0; width:100vw; height:100vh; height:100dvh; max-width:none; margin:0; overflow:hidden; }
       #w canvas { display:block; width:100vw; height:100vh; height:100dvh; max-width:none; }
       #ui { inset:0; width:100%; height:100%; box-sizing:border-box; padding: max(8px, env(safe-area-inset-top)) 8px max(56px, env(safe-area-inset-bottom)); overflow:hidden; }
-      #tc { position:fixed; left:0; right:0; bottom:max(4px, env(safe-area-inset-bottom)); z-index:1000; display:flex; justify-content:space-between; align-items:flex-end; box-sizing:border-box; width:100%; max-width:none; margin:0; padding:0 8px; gap:8px; pointer-events:none; }
+      #tc { position:fixed; left:0; right:0; bottom:max(22px, calc(env(safe-area-inset-bottom, 0px) + 18px)); z-index:1000; display:flex; justify-content:space-between; align-items:flex-end; box-sizing:border-box; width:100%; max-width:none; margin:0; padding:0 8px; gap:8px; pointer-events:none; }
       #tc > span { display:flex; gap:5px; pointer-events:auto; }
-      #tc button { margin:0; padding:clamp(7px, 2.2vh, 13px) clamp(9px, 2vw, 18px); font-size:clamp(11px, 2.6vh, 15px); min-width:38px; }
+      #tc button { margin:0; padding:clamp(7px, 2.2vh, 13px) clamp(9px, 2vw, 18px); font-size:clamp(11px, 2.6vh, 15px); min-width:38px; touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
       #pauseBtn { top:max(6px, env(safe-area-inset-top)); left:max(6px, env(safe-area-inset-left)); z-index:1200; font-size:12px; padding:5px 8px; }
       .gr { gap:clamp(2px, .8vw, 8px); }
       .gr button { padding:.35em .12em; font-size:clamp(9px, 1.8vh, 13px); }
@@ -190,7 +190,23 @@
     });
     addEventListener('keyup', e => K[e.code] = 0);
     C.addEventListener('pointerdown', e => { if (telaVertical()) { e.preventDefault(); return; } au(); K.F = 1; if (mode == 'cut') csNext(); if (mode == 'talk') tkNext(); if (mode == 'arrive') arrSkip() }); addEventListener('pointerup', () => K.F = 0);
-    document.querySelectorAll('#tc button').forEach(b => { const k = b.dataset.k; b.onpointerdown = e => { e.preventDefault(); if (telaVertical()) { atualizarOrientacao(); return; } au(); K[k] = 1 }; b.onpointerup = b.onpointerleave = () => K[k] = 0 });
+    // Controles por toque: captura o ponteiro para manter o botão ativo enquanto o dedo estiver pressionado.
+    // Não limpar no pointerleave: em celulares isso pode disparar durante um toque e interromper o tiro.
+    document.querySelectorAll('#tc button').forEach(b => {
+      const k = b.dataset.k;
+      b.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        if (telaVertical()) { atualizarOrientacao(); return; }
+        au();
+        K[k] = 1;
+        try { b.setPointerCapture(e.pointerId); } catch (_) {}
+      });
+      const soltar = e => { if (e) e.preventDefault(); K[k] = 0; };
+      b.addEventListener('pointerup', soltar);
+      b.addEventListener('pointercancel', soltar);
+      b.addEventListener('lostpointercapture', () => { K[k] = 0; });
+      b.addEventListener('contextmenu', e => e.preventDefault());
+    });
 
     function togglePause() {
         if(mode === 'menu' || mode === 'cut') return;
