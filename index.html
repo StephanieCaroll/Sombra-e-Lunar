@@ -31,6 +31,20 @@
     #rotateNotice p { max-width:340px; font-size:clamp(15px,4vw,19px); line-height:1.5; }
     @keyframes rotatePhone { 0%,20% { transform:rotate(0deg) } 65%,100% { transform:rotate(90deg) } }
     @media (orientation:portrait) and (max-width:900px) and (pointer:coarse) { #rotateNotice { display:flex; } }
+
+    /* Celular na horizontal: o jogo ocupa a viewport inteira, sem ser cortado. */
+    @media (orientation:landscape) and (max-width:900px) and (pointer:coarse) {
+      html, body { width:100%; height:100%; height:100dvh; overflow:hidden; }
+      #w { position:fixed; inset:0; width:100vw; height:100vh; height:100dvh; max-width:none; margin:0; overflow:hidden; }
+      #w canvas { display:block; width:100vw; height:100vh; height:100dvh; max-width:none; }
+      #ui { inset:0; width:100%; height:100%; box-sizing:border-box; padding: max(8px, env(safe-area-inset-top)) 8px max(56px, env(safe-area-inset-bottom)); overflow:hidden; }
+      #tc { position:fixed; left:0; right:0; bottom:max(4px, env(safe-area-inset-bottom)); z-index:1000; display:flex; justify-content:space-between; align-items:flex-end; box-sizing:border-box; width:100%; max-width:none; margin:0; padding:0 8px; gap:8px; pointer-events:none; }
+      #tc > span { display:flex; gap:5px; pointer-events:auto; }
+      #tc button { margin:0; padding:clamp(7px, 2.2vh, 13px) clamp(9px, 2vw, 18px); font-size:clamp(11px, 2.6vh, 15px); min-width:38px; }
+      #pauseBtn { top:max(6px, env(safe-area-inset-top)); left:max(6px, env(safe-area-inset-left)); z-index:1200; font-size:12px; padding:5px 8px; }
+      .gr { gap:clamp(2px, .8vw, 8px); }
+      .gr button { padding:.35em .12em; font-size:clamp(9px, 1.8vh, 13px); }
+    }
   </style>
 </head>
 
