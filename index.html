@@ -25,6 +25,15 @@
     #pauseBtn { position: absolute; top: 40px; left: 14px; z-index: 100; padding: 6px 12px; font-size: 14px; font-weight: bold; background: #171424cc; border: 2px solid #5b5675; border-radius: 6px; color: #fff; cursor: pointer; pointer-events: auto; }
     @media(hover:hover) { #tc { display: none } }
 
+    /* Tela cheia real: o navegador esconde a barra quando oferece suporte à Fullscreen API. */
+    :fullscreen { width:100%; height:100%; background:var(--bg); }
+    :fullscreen body { width:100%; height:100%; height:100dvh; margin:0; overflow:hidden; }
+    :fullscreen #w { position:fixed; inset:0; width:100vw; height:100vh; height:100dvh; max-width:none; margin:0; overflow:hidden; }
+    :fullscreen #w canvas { width:100vw; height:100vh; height:100dvh; max-width:none; }
+    :fullscreen #ui { inset:0; box-sizing:border-box; overflow:hidden; }
+    :fullscreen #tc { position:fixed; left:0; right:0; bottom:env(safe-area-inset-bottom, 0px); z-index:1000; }
+    #fullscreenHelp { font-size:clamp(11px, 1.6vw, 14px); opacity:.85; }
+
     #rotateNotice { display:none; position:fixed; inset:0; z-index:99999; background:radial-gradient(ellipse at center,#211735 0%,#07060c 75%); color:#ece9f5; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:24px; box-sizing:border-box; font-family:Georgia,'Times New Roman',serif; }
     #rotateNotice .rotateIcon { font-size:clamp(56px,15vw,90px); line-height:1.2; margin-bottom:18px; animation:rotatePhone 1.8s ease-in-out infinite; }
     #rotateNotice h2 { color:#7dff9a; font-size:clamp(22px,6vw,34px); margin:0 0 12px; }
@@ -250,6 +259,7 @@
         if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
       }
     }
+    document.addEventListener('fullscreenchange', () => { atualizarOrientacao(); });
     window.addEventListener('resize', atualizarOrientacao);
     window.addEventListener('orientationchange', atualizarOrientacao);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) atualizarOrientacao(); });
@@ -259,10 +269,20 @@
     function demo() { mode = 'menu'; $('pauseBtn').style.display = 'none'; S = 0; st = ST[0]; L = AX = 1e9; P = mkP(); P.x = 200; cam = 0; E = []; B = []; F = []; Q = []; SP = []; PL = []; HZ = []; PK = []; HL = []; FT = []; NT = []; spT = 60; bossDead = false; BO = false; mus('menu') }
     function menu() {
       demo();
-      ui(`<h1>SOMBRA E LUNA</h1><p>A Noite do Rei Fantasma</p><button onclick="play0()">Jogar</button><button onclick="sel()">Fases</button><button onclick="help()">Controles</button><button onclick="mute()">Som: ${muted ? 'desligado' : 'ligado'}</button>`)
+      ui(`<h1>SOMBRA E LUNA</h1><p>A Noite do Rei Fantasma</p><button onclick="entrarTelaCheia()">⛶ Tela cheia</button><button onclick="play0()">Jogar</button><button onclick="sel()">Fases</button><button onclick="help()">Controles</button><button onclick="mute()">Som: ${muted ? 'desligado' : 'ligado'}</button><p id="fullscreenHelp">Toque em “Tela cheia” para esconder a barra do navegador.</p>`)
     }
     function mute() { muted = !muted; if (MG) MG.gain.value = muted ? 0 : .45; menu() }
-    function play0() { au(); seen = 1; sv(); cutscene(INTRO, 0, sel) }
+    async function entrarTelaCheia() {
+      try {
+        const alvo = document.documentElement;
+        if (!document.fullscreenElement && alvo.requestFullscreen) await alvo.requestFullscreen({ navigationUI: 'hide' });
+        // Alguns navegadores Android permitem travar a orientação depois de entrar em tela cheia.
+        if (screen.orientation && screen.orientation.lock) { try { await screen.orientation.lock('landscape'); } catch (e) {} }
+      } catch (e) {
+        ui(`<h2>Tela cheia</h2><p>Este navegador não permite esconder a barra automaticamente. No Chrome para Android, tente novamente pelo botão “Tela cheia”.</p><button onclick="menu()">Voltar</button>`);
+      }
+    }
+    function play0() { entrarTelaCheia(); au(); seen = 1; sv(); cutscene(INTRO, 0, sel) }
     function help() { ui('<h2>Controles</h2><p>Andar: Setas ou Controles na Tela<br>Pular: Cima ou W (Pulo duplo no ar)<br>Atirar: Espaço ou Botão<br>Pule buracos (abismos) e zumbis. Fantasmas ficam vermelhos antes de atacar. Salve no checkpoint do meio!</p><button onclick="menu()">Voltar</button>') }
     function sel() {
       if (mode !== 'menu') demo(); mode = 'menu'; let h = '<h2>Escolha a fase</h2><div class="gr">';
