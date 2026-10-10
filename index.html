@@ -24,10 +24,18 @@
     #tc button { padding: .9em 1.1em; font-size: 14px; touch-action: none }
     #pauseBtn { position: absolute; top: 40px; left: 14px; z-index: 100; padding: 6px 12px; font-size: 14px; font-weight: bold; background: #171424cc; border: 2px solid #5b5675; border-radius: 6px; color: #fff; cursor: pointer; pointer-events: auto; }
     @media(hover:hover) { #tc { display: none } }
+
+    #rotateNotice { display:none; position:fixed; inset:0; z-index:99999; background:radial-gradient(ellipse at center,#211735 0%,#07060c 75%); color:#ece9f5; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:24px; box-sizing:border-box; font-family:Georgia,'Times New Roman',serif; }
+    #rotateNotice .rotateIcon { font-size:clamp(56px,15vw,90px); line-height:1.2; margin-bottom:18px; animation:rotatePhone 1.8s ease-in-out infinite; }
+    #rotateNotice h2 { color:#7dff9a; font-size:clamp(22px,6vw,34px); margin:0 0 12px; }
+    #rotateNotice p { max-width:340px; font-size:clamp(15px,4vw,19px); line-height:1.5; }
+    @keyframes rotatePhone { 0%,20% { transform:rotate(0deg) } 65%,100% { transform:rotate(90deg) } }
+    @media (orientation:portrait) and (max-width:900px) and (pointer:coarse) { #rotateNotice { display:flex; } }
   </style>
 </head>
 
 <body>
+  <div id="rotateNotice" role="alert" aria-live="assertive"><div class="rotateIcon" aria-hidden="true">📱</div><h2>Gire seu celular!</h2><p>Para jogar <strong>Sombra e Luna</strong>, coloque o celular na horizontal.</p><p>O jogo ficará pausado até você girar a tela.</p></div>
   <div id="w">
     <canvas id="c"></canvas>
     <div id="ui"></div>
@@ -144,6 +152,7 @@
     /* ---------- INPUT ---------- */
     const K = {};
     addEventListener('keydown', e => {
+      if (telaVertical()) { e.preventDefault(); atualizarOrientacao(); return; }
       au(); K[e.code] = 1;
       if (mode == 'arrive' && (e.code == 'Enter' || e.code == 'Escape')) arrSkip();
       if (e.code.startsWith('Arrow') || e.code == 'Space') e.preventDefault();
@@ -157,8 +166,8 @@
       if (mode == 'talk' && !e.repeat && (e.code == 'Space' || e.code == 'Enter')) tkNext();
     });
     addEventListener('keyup', e => K[e.code] = 0);
-    C.addEventListener('pointerdown', () => { au(); K.F = 1; if (mode == 'cut') csNext(); if (mode == 'talk') tkNext(); if (mode == 'arrive') arrSkip() }); addEventListener('pointerup', () => K.F = 0);
-    document.querySelectorAll('#tc button').forEach(b => { const k = b.dataset.k; b.onpointerdown = e => { e.preventDefault(); au(); K[k] = 1 }; b.onpointerup = b.onpointerleave = () => K[k] = 0 });
+    C.addEventListener('pointerdown', e => { if (telaVertical()) { e.preventDefault(); return; } au(); K.F = 1; if (mode == 'cut') csNext(); if (mode == 'talk') tkNext(); if (mode == 'arrive') arrSkip() }); addEventListener('pointerup', () => K.F = 0);
+    document.querySelectorAll('#tc button').forEach(b => { const k = b.dataset.k; b.onpointerdown = e => { e.preventDefault(); if (telaVertical()) { atualizarOrientacao(); return; } au(); K[k] = 1 }; b.onpointerup = b.onpointerleave = () => K[k] = 0 });
 
     function togglePause() {
         if(mode === 'menu' || mode === 'cut') return;
@@ -215,6 +224,22 @@
     let FT = [], NT = [], DN = null, TK = null, OV = { t: 0, by: '', tip: '', s: '' }, KL = 0;
     let mode = 'menu', S = 0, st = ST[0], L = 1e9, AX = 1e9, P, E = [], B = [], F = [], Q = [], SP = [], PL = [], HZ = [], PK = [], HL = [], cam = 0, sc0 = 0, tick = 0, shake = 0, bossDead = false, BO = false, spT = 0, cp = 0, CPX = 0, ban = null, CS = null, BI = null;
     const ui = h => { $('ui').innerHTML = h || '' };
+    // Em celulares, bloqueia a jogabilidade enquanto a tela estiver na vertical.
+    const precisaDeitar = () => window.matchMedia('(max-width: 900px) and (pointer: coarse)').matches;
+    const telaVertical = () => precisaDeitar() && window.matchMedia('(orientation: portrait)').matches;
+    function atualizarOrientacao() {
+      const bloqueado = telaVertical();
+      const aviso = $('rotateNotice');
+      if (aviso) aviso.style.display = bloqueado ? 'flex' : 'none';
+      if (bloqueado) {
+        for (const k in K) K[k] = 0;
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      }
+    }
+    window.addEventListener('resize', atualizarOrientacao);
+    window.addEventListener('orientationchange', atualizarOrientacao);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) atualizarOrientacao(); });
+
     const mkP = () => ({ x: 150, y: GY, vx: 0, vy: 0, hp: 100, d: 1, inv: 0, cd: 0, fl: 0, t: 0, g: 1, j: 0, jp: 0, on: null, happy: 0 });
 
     function demo() { mode = 'menu'; $('pauseBtn').style.display = 'none'; S = 0; st = ST[0]; L = AX = 1e9; P = mkP(); P.x = 200; cam = 0; E = []; B = []; F = []; Q = []; SP = []; PL = []; HZ = []; PK = []; HL = []; FT = []; NT = []; spT = 60; bossDead = false; BO = false; mus('menu') }
@@ -408,6 +433,7 @@
 
     /* ---------- UPDATE ---------- */
     function update() {
+      if (telaVertical()) { for (const k in K) K[k] = 0; return; }
       if(paused) return;
       tick++;
       FT.forEach(f => { f.y -= .7; f.l-- }); FT = FT.filter(f => f.l > 0);
@@ -1216,10 +1242,13 @@
       if (!loopAtivo) return;
       acc += Math.min(50, ts - last);
       last = ts;
-      while (acc >= 16.67) { update(); acc -= 16.67 }
+      atualizarOrientacao();
+      if (!telaVertical()) { while (acc >= 16.67) { update(); acc -= 16.67 } }
+      else { acc = 0; last = ts; }
       draw();
       loopId = requestAnimationFrame(loop);
     }
+    atualizarOrientacao();
     menu();
     if (loopId) cancelAnimationFrame(loopId);
     loopAtivo = true;
