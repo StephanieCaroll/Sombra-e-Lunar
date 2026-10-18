@@ -1305,6 +1305,137 @@
     last = performance.now();
     loopId = requestAnimationFrame(loop);
   </script>
+<!-- ============================================================
+  PATCH MOBILE - Sombra e Luna
+  COLE ESTE BLOCO INTEIRO LOGO ANTES DE </body>
+  (depois do </script> do jogo). Nao apague nada do jogo.
+============================================================ -->
+<style>
+  html{overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+  body,#w,#mc{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  @media (pointer:coarse){
+    #tc{display:none!important}
+    /* mantem proporcao 16:9 sem esticar o canvas */
+    #w{position:fixed!important;inset:auto!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%);
+       width:min(100vw,calc(100dvh*16/9))!important;height:min(100dvh,calc(100vw*9/16))!important;max-width:none!important;margin:0!important;overflow:hidden}
+    #w canvas{width:100%!important;height:100%!important}
+    #ui{inset:0!important;padding:1.5% 1% 1%!important;overflow:hidden;justify-content:center}
+    #ui button{min-height:38px}
+    #ui h1{font-size:2.2em}
+    #pauseBtn{top:9%!important;left:1.5%!important;min-width:44px;min-height:40px;padding:4px 10px!important;font-size:13px!important;opacity:.85}
+  }
+  #mc{position:fixed;inset:0;z-index:900;pointer-events:none;display:none;--b:clamp(62px,21vh,96px)}
+  #mc.on{display:block}
+  #mc .c{position:absolute;pointer-events:auto;touch-action:none;display:flex;align-items:center;justify-content:center;
+    color:#fff;font:bold clamp(12px,3.2vh,17px) Georgia,serif;border:2px solid #ffffff66;background:#171424a8;
+    box-shadow:0 0 0 1px #0008,inset 0 0 12px #0006;opacity:.62;transition:transform .05s,opacity .05s,background .05s}
+  #mc .c.h{opacity:.95;background:#7dff9acc;color:#06130a;transform:scale(.93);border-color:#fff}
+  #dp{left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));display:flex;gap:10px;touch-action:none;pointer-events:auto;position:absolute}
+  #dp .c{position:static;width:var(--b);height:var(--b);border-radius:50%;font-size:calc(var(--b)*.4)}
+  #bj{right:max(14px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));width:calc(var(--b)*1.05);height:calc(var(--b)*1.05);border-radius:50%}
+  #bs{right:calc(max(14px,env(safe-area-inset-right)) + var(--b)*1.05 + 14px);bottom:calc(max(12px,env(safe-area-inset-bottom)) + var(--b)*.32);width:calc(var(--b)*.92);height:calc(var(--b)*.92);border-radius:50%;background:#3a1420a8}
+  #bs.h{background:#ff6a8acc}
+  #af{right:max(14px,env(safe-area-inset-right));bottom:calc(max(12px,env(safe-area-inset-bottom)) + var(--b)*1.05 + 12px);padding:7px 12px;border-radius:18px;min-height:34px}
+  #sk{right:max(14px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));padding:10px 16px;border-radius:10px;opacity:.9;display:none}
+  #mc.skip #sk{display:flex}
+  #mc.skip #dp,#mc.skip #bj,#mc.skip #bs,#mc.skip #af{display:none}
+</style>
+<script>
+(() => {
+  const touch = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window || location.search.includes('touch');
+  if (!touch) return;
+
+  // Bloqueia zoom/gestos do navegador
+  const vp = document.querySelector('meta[name=viewport]');
+  if (vp) vp.content = 'width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover';
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  document.addEventListener('dblclick', e => e.preventDefault());
+
+  // ---------- Controles na tela ----------
+  const mc = document.createElement('div'); mc.id = 'mc';
+  mc.innerHTML = '<div id="dp"><div class="c" data-d="l">◀</div><div class="c" data-d="r">▶</div></div>' +
+    '<div class="c" id="bs">ATIRAR</div><div class="c" id="bj">PULAR</div><div class="c" id="af"></div><div class="c" id="sk">PULAR ⏭</div>';
+  document.body.appendChild(mc);
+  const q = s => mc.querySelector(s), bs = q('#bs'), bj = q('#bj'), af = q('#af'), sk = q('#sk'), dp = q('#dp');
+
+  // Botao segurado (multitoque: cada botao tem seu proprio ponteiro)
+  const hold = (el, key) => {
+    const on = e => { e.preventDefault(); if (telaVertical()) return; au(); K[key] = 1; el.classList.add('h'); try { el.setPointerCapture(e.pointerId) } catch (_) {} };
+    const off = e => { if (e) e.preventDefault(); K[key] = 0; el.classList.remove('h') };
+    el.addEventListener('pointerdown', on); el.addEventListener('pointerup', off);
+    el.addEventListener('pointercancel', off); el.addEventListener('lostpointercapture', () => off());
+  };
+  hold(bj, 'TJ'); hold(bs, 'TF');
+
+  // D-pad deslizante: arraste o dedo entre as setas sem soltar
+  const [bl, br] = dp.querySelectorAll('.c'); let dpId = null;
+  const dir = e => {
+    const r = dp.getBoundingClientRect(), m = r.left + r.width / 2, dz = r.width * .04, l = e.clientX < m - dz, rt = e.clientX > m + dz;
+    K.TL = l ? 1 : 0; K.TR = rt ? 1 : 0; bl.classList.toggle('h', l); br.classList.toggle('h', rt);
+  };
+  const dpOff = () => { dpId = null; K.TL = K.TR = 0; bl.classList.remove('h'); br.classList.remove('h') };
+  dp.addEventListener('pointerdown', e => { e.preventDefault(); if (telaVertical()) return; au(); dpId = e.pointerId; try { dp.setPointerCapture(e.pointerId) } catch (_) {} dir(e) });
+  dp.addEventListener('pointermove', e => { if (e.pointerId === dpId) dir(e) });
+  dp.addEventListener('pointerup', e => { if (e.pointerId === dpId) dpOff() });
+  dp.addEventListener('pointercancel', dpOff); dp.addEventListener('lostpointercapture', dpOff);
+
+  // Tiro automatico (liga/desliga, salvo no aparelho)
+  let auto = true; try { auto = localStorage.getItem('mc_af') !== '0' } catch (_) {}
+  const lab = () => { af.textContent = 'AUTO: ' + (auto ? 'LIGADO' : 'DESLIG.'); af.style.background = auto ? '#1d4a2ea8' : '#171424a8' };
+  af.addEventListener('pointerdown', e => { e.preventDefault(); auto = !auto; try { localStorage.setItem('mc_af', auto ? '1' : '0') } catch (_) {} lab() });
+  lab();
+
+  const octl = ctl;
+  ctl = function () {
+    const c = octl();
+    if (auto && mode === 'play' && !c.f && E.some(e => !e.waiting && (e.x - P.x) * P.d > 0 && (e.x - P.x) * P.d < 560 && e.x > cam - 20 && e.x < cam + W + 20)) c.f = 1;
+    return c;
+  };
+
+  // Pular cutscene / dialogo / entrada de fase
+  const skipTalk = () => { TK.i = TK.L.length - 1; TK.t = 9999; tkNext() };
+  sk.addEventListener('pointerdown', e => {
+    e.preventDefault(); au();
+    if (mode === 'cut') csEnd(); else if (mode === 'talk') skipTalk(); else if (mode === 'arrive') arrSkip();
+  });
+
+  // Toque no canvas: so avanca dialogos (nunca atira sem querer)
+  $('w').addEventListener('pointerdown', e => {
+    if (e.target !== C) return;
+    e.stopPropagation(); e.preventDefault();
+    if (telaVertical()) return; au();
+    if (mode === 'cut') csNext(); else if (mode === 'talk') tkNext(); else if (mode === 'arrive') arrSkip();
+  }, true);
+
+  // Ajuda: mais tempo invulneravel apos levar dano + vibracao
+  const oh = hurt;
+  hurt = function (...a) {
+    const before = P.hp; oh(...a);
+    if (P.hp < before) { if (P.hp > 0) P.inv = Math.max(P.inv, 75); try { navigator.vibrate && navigator.vibrate(P.hp > 0 ? 35 : [80, 40, 120]) } catch (_) {} }
+  };
+
+  // Pausa automatica ao sair do app
+  document.addEventListener('visibilitychange', () => { if (document.hidden && mode === 'play' && !paused) togglePause() });
+
+  // Fonte dos menus acompanha o tamanho real do jogo
+  const fit = () => { const w = $('w').clientWidth; $('ui').style.fontSize = Math.max(10, w / 960 * 18) + 'px' };
+  addEventListener('resize', fit); addEventListener('orientationchange', () => setTimeout(fit, 250)); fit();
+
+  // Mostra/esconde controles conforme o estado do jogo
+  let was = '';
+  setInterval(() => {
+    fit();
+    const skipOk = mode === 'cut' || mode === 'talk' || mode === 'arrive';
+    const playing = mode === 'play' && !paused;
+    const state = (playing || skipOk) && !telaVertical() ? (skipOk ? 'skip' : 'play') : 'off';
+    if (state === was) return; was = state;
+    mc.className = state === 'off' ? '' : state === 'skip' ? 'on skip' : 'on';
+    if (state !== 'play') { K.TL = K.TR = K.TJ = K.TF = 0; [bl, br, bs, bj].forEach(b => b.classList.remove('h')) }
+  }, 100);
+})();
+</script>
+
 </body>
 
 </html>
